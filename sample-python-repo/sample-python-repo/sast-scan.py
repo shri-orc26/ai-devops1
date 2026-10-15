@@ -22,7 +22,7 @@ import requests
 # ===================
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "qwen2.5-coder:0.5b"
+MODEL = "qwen3:1.7b"
 REPO_ROOT = Path(__file__).resolve().parent
 
 TARGET_FILES = [
@@ -102,6 +102,7 @@ File: {filename}
 Source:
 ```python
 {source_code}
+```
 """
 '''===================
 RESULT HELPERS
@@ -134,17 +135,18 @@ def ask_ollama(prompt: str) -> str:
         "prompt": prompt,
         "stream": False,
         "format": SAST_SCHEMA,
+        "think": False,
         "options": {
             "temperature": 0.2,
             "repeat_penalty": 1.15,
-            "num_predict": 4096,
+            "num_predict": 8192,
         },
     }
     try:
         response = requests.post(
         OLLAMA_URL,
         json=payload,
-        timeout=(10, 180),
+        timeout=(10, 300),
     )
     except requests.exceptions.Timeout as exc:
          raise RuntimeError("Ollama request timed out.") from exc
@@ -296,47 +298,32 @@ def print_report(all_results: list):
 
     for result in all_results:
         print(f"\nFile: {result['file']}")
+        if result["scan_error"]:
+            incomplete += 1
+            print(f"  Status: INCOMPLETE - {result['scan_error']}")
+            continue
 
-    if result["scan_error"]:
-        incomplete += 1
-        print(f"  Status: INCOMPLETE — {result['scan_error']}")
-    else:
-        print("  Status: RESPONSE VALIDATED — findings require review")
-
-    summary = result["summary"]
-    print(f"  Issues reported: {summary['total_issues']}")
-
-    for severity in SEVERITIES:
-        print(
-            f"  {severity}: {summary[severity.lower()]}"
-        )
-
-    for issue in sorted(
-        result["issues"],
-        key=lambda item: SEVERITY_ORDER[item["severity"]],
-    ):
-        print(
-            f"\n  [{issue['severity']}] "
-            f"{issue['id']} — {issue['category']}"
-        )
-        print(f"    Line: {issue['line_range']}")
-        print(f"    Issue: {issue['description']}")
-        print(f"    Fix: {issue['recommendation']}")
-
-    for key in totals:
-        totals[key] += summary[key]
+        print("  Status: RESPONSE VALIDATED - findings require review")
+        summary = result["summary"]
+        print(f"  Issues reported: {summary['total_issues']}")
+        for severity in SEVERITIES:
+            print(f"  {severity}: {summary[severity.lower()]}")
+        for issue in sorted(result["issues"], key=lambda item: SEVERITY_ORDER[item["severity"]]):
+            print(f"\n  [{issue['severity']}] {issue['id']} - {issue['category']}")
+            print(f"    Line: {issue['line_range']}")
+            print(f"    Issue: {issue['description']}")
+            print(f"    Fix: {issue['recommendation']}")
+        for key in totals:
+            totals[key] += summary[key]
 
     print("\n" + "=" * 70)
     print(f"Files with validated responses: {len(all_results) - incomplete}")
     print(f"Incomplete files: {incomplete}")
     print(f"Findings from validated responses: {totals['total_issues']}")
-
     for severity in SEVERITIES:
         print(f"{severity}: {totals[severity.lower()]}")
-
     if incomplete:
         print("Assessment is incomplete. Zero findings is not a clean scan.")
-
     print("=" * 70)
 
 
@@ -401,29 +388,24 @@ def main() -> int:
     print(f"Model: {MODEL}")
     print(f"Repo: {REPO_ROOT}")
     print(f"Files: {', '.join(TARGET_FILES)}\n")
+
     all_results = [
-    scan_file(REPO_ROOT / filename, REPO_ROOT)
-    for filename in TARGET_FILES
+        scan_file(REPO_ROOT / filename, REPO_ROOT)
+        for filename in TARGET_FILES
     ]
-
     print_report(all_results)
-
     try:
-        save_json_report(
-        all_results,
-        REPO_ROOT / "sast_report.json",
-    )
+        save_json_report(all_results, REPO_ROOT / "sast_report.json")
     except OSError as exc:
         print(f"[ERROR] Cannot save report: {exc}")
-    return 1
+        return 1
 
     code = compute_exit_code(all_results)
     labels = {
-        0: "PASSED — no blocking findings reported",
-        1: "FAILED — scan incomplete or critical/high findings",
-        2: "UNSTABLE — medium/low findings",
+        0: "PASSED - no blocking findings reported",
+        1: "FAILED - scan incomplete or critical/high findings",
+        2: "UNSTABLE - medium/low findings",
     }
-
     print(f"\nBuild status: {labels[code]} (exit {code})")
     return code
 
