@@ -117,6 +117,11 @@ def ask_ollama(prompt: str) -> str:
 
     try:
         resp = requests.post(OLLAMA_URL, json=payload, timeout=120)
+        if not resp.ok:
+                print(
+                     f"\n[ERROR] Ollama HTTP {resp.status_code}: {resp.text}",
+                     flush=True,
+            )
         resp.raise_for_status()
         return resp.json().get("response", "")
     except requests.exceptions.ConnectionError:
