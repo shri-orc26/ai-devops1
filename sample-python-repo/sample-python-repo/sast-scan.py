@@ -108,11 +108,13 @@ def ask_ollama(prompt: str) -> str:
         "model": MODEL,
         "prompt": prompt,
         "stream": False,
+        "format": "json",
         "options": {
-            "temperature": 0.1,   # low temp -> deterministic security analysis
-            "num_predict": 2048,
-        }
+            "temperature": 0,
+            "num_predict": 4096,
+        },
     }
+
     try:
         resp = requests.post(OLLAMA_URL, json=payload, timeout=120)
         resp.raise_for_status()
@@ -124,35 +126,76 @@ def ask_ollama(prompt: str) -> str:
         print("\n[ERROR] Ollama timed out. Model may be loading -- retry.")
         sys.exit(1)
 
-
 def parse_json_response(raw: str, filename: str) -> dict:
-    """Extract JSON from LLM response, handling markdown fences."""
     text = raw.strip()
 
-    # Strip ```json ... ``` fences if present
     if text.startswith("```"):
-        lines = text.splitlines()
         text = "\n".join(
-            line for line in lines
+            line for line in text.splitlines()
             if not line.strip().startswith("```")
         ).strip()
 
+    summary = {
+        "total_issues": 0,
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "info": 0,
+    }
+
     try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        # Fallback: return a minimal structure flagging the parse failure
+        result = json.loads(text)
+
+        if not isinstance(result, dict):
+            raise ValueError("Response must be a JSON object")
+
+        issues = result.get("issues")
+        if not isinstance(issues, list):
+            raise ValueError("Response must contain an issues array")
+
+        required = (
+            "id", "severity", "category", "line_range",
+            "description", "recommendation",
+        )
+
+        for issue in issues:
+            if not isinstance(issue, dict):
+                raise ValueError("Each issue must be an object")
+
+            if any(
+                not isinstance(issue.get(key), str)
+                or not issue[key].strip()
+                for key in required
+            ):
+                raise ValueError("Issue has missing or invalid fields")
+
+            severity = issue["severity"].upper().strip()
+            if severity not in {"CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"}:
+                raise ValueError(f"Invalid severity: {severity}")
+
+            issue["severity"] = severity
+
+        # Ignore model-generated totals.
+        summary["total_issues"] = len(issues)
+        for issue in issues:
+            summary[issue["severity"].lower()] += 1
+
         return {
             "file": filename,
-            "issues": [{
-                "id": "SAST-PARSE-ERR",
-                "severity": "INFO",
-                "category": "Parse Error",
-                "line_range": "N/A",
-                "description": "LLM response could not be parsed as JSON.",
-                "recommendation": "Review raw output in sast_report.json under raw_responses.",
-                "_raw": raw[:500]
-            }],
-            "summary": {"total_issues": 0, "critical": 0, "high": 0, "medium": 0, "low": 0}
+            "issues": issues,
+            "summary": summary,
+            "scan_error": None,
+            "raw_response": raw,
+        }
+
+    except (ValueError, TypeError) as exc:
+        return {
+            "file": filename,
+            "issues": [],
+            "summary": summary,
+            "scan_error": str(exc),
+            "raw_response": raw,
         }
 
 
@@ -166,7 +209,10 @@ def scan_file(filepath: Path, repo_root: Path) -> dict:
     raw    = ask_ollama(prompt)
     result = parse_json_response(raw, rel_name)
     result["file"] = rel_name
-    print(f"done  ({result['summary'].get('total_issues', '?')} issues)")
+    if result.get("scan_error"):
+        print(f"INCOMPLETE: {result['scan_error']}")
+    else:
+        print(f"done ({result['summary']['total_issues']} issues)")
     return result
 
 
@@ -252,15 +298,29 @@ def save_json_report(all_results: list, output_path: Path):
 
 def compute_exit_code(all_results: list) -> int:
     """
-    Exit codes for Jenkins:
-      0 -> no issues         (green  - build passes)
-      1 -> critical/high     (red    - fail build)
-      2 -> medium/low only   (yellow - mark unstable)
+    Exit codes:
+      0 -> no blocking findings
+      1 -> scan incomplete or critical/high findings
+      2 -> medium/low findings only
+
+    Jenkins must explicitly handle code 2 to mark the build unstable.
     """
-    critical = sum(r.get("summary", {}).get("critical", 0) for r in all_results)
-    high     = sum(r.get("summary", {}).get("high", 0)     for r in all_results)
-    medium   = sum(r.get("summary", {}).get("medium", 0)   for r in all_results)
-    low      = sum(r.get("summary", {}).get("low", 0)      for r in all_results)
+    if any(result.get("scan_error") for result in all_results):
+        print("[ERROR] Scan incomplete; see sast_report.json")
+        return 1
+
+    critical = sum(
+        r.get("summary", {}).get("critical", 0) for r in all_results
+    )
+    high = sum(
+        r.get("summary", {}).get("high", 0) for r in all_results
+    )
+    medium = sum(
+        r.get("summary", {}).get("medium", 0) for r in all_results
+    )
+    low = sum(
+        r.get("summary", {}).get("low", 0) for r in all_results
+    )
 
     if critical > 0 or high > 0:
         return 1
@@ -303,7 +363,7 @@ def main():
     code = compute_exit_code(all_results)
     exit_labels = {
         0: "PASSED",
-        1: "FAILED  (critical/high issues found)",
+        1: "FAILED (scan incomplete or critical/high findings)",
         2: "UNSTABLE (medium/low issues found)",
     }
     print(f"\n  Build status : {exit_labels[code]}  (exit {code})\n")

@@ -5,6 +5,8 @@ import os
 import datetime
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable not set")
 
 def generate_token(user_id: int) -> str:
     # FIXED: JWT with expiry and signature

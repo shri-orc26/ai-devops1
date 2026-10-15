@@ -1,9 +1,10 @@
 import sqlite3
 from typing import Optional
-
+from pathlib import Path
+DB_PATH = Path(__file__).resolve().parent.parent / "users.db"
 def execute_query(query: str, params: tuple = ()) -> list:
     # FIXED: Always uses parameterized queries, consistent return type
-    conn = sqlite3.connect('app.db')
+    conn = sqlite3.connect(DB_PATH)
     try:
         cursor = conn.cursor()
         cursor.execute(query, params)
