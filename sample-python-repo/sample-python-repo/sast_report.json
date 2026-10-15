@@ -1,0 +1,278 @@
+{
+  "scan_timestamp": "2026-03-26T15:07:05.303798",
+  "model": "qwen2.5-coder:0.5b",
+  "repo": "c:\\labs\\ai-devops\\sample-python-repo",
+  "files_scanned": 3,
+  "results": [
+    {
+      "file": "app.py",
+      "issues": [
+        {
+          "id": "SAST-001",
+          "severity": "CRITICAL",
+          "category": "SQL Injection",
+          "line_range": "12-15",
+          "description": "SQL Injection vulnerability in the '/login' route. The username and password are directly concatenated without parameterization.",
+          "recommendation": "Use parameterized queries to prevent SQL injection.",
+          "code": "execute_query(f'SELECT * FROM users WHERE username = ? AND password = ?')"
+        },
+        {
+          "id": "SAST-002",
+          "severity": "CRITICAL",
+          "category": "Hardcoded Secret",
+          "line_range": "16-17",
+          "description": "Hardcoded secret key is exposed in the '/login' route.",
+          "recommendation": "Use environment variables or secure vaults to store and manage secrets.",
+          "code": "SECRET_KEY = os.getenv('SECRET_KEY')"
+        },
+        {
+          "id": "SAST-003",
+          "severity": "CRITICAL",
+          "category": "Insecure Deserialization",
+          "line_range": "18-21",
+          "description": "Insecure deserialization in the '/login' route using pickle.",
+          "recommendation": "Use secure deserialization libraries like `pickle` or `yaml.load`.",
+          "code": "return pickle.loads(data.encode())"
+        },
+        {
+          "id": "SAST-004",
+          "severity": "CRITICAL",
+          "category": "Weak Cryptography",
+          "line_range": "22-23",
+          "description": "Weak cryptographic algorithms are used in the '/login' route.",
+          "recommendation": "Use strong cryptographic algorithms like SHA-256 or bcrypt.",
+          "code": "conn = sqlite3.connect('users.db')"
+        },
+        {
+          "id": "SAST-005",
+          "severity": "CRITICAL",
+          "category": "Missing Authentication or Authorization",
+          "line_range": "24-25",
+          "description": "Missing authentication or authorization in the '/login' route.",
+          "recommendation": "Implement authentication and authorization mechanisms.",
+          "code": "verify_token"
+        },
+        {
+          "id": "SAST-006",
+          "severity": "CRITICAL",
+          "category": "Debug Mode Enabled in Production",
+          "line_range": "26-27",
+          "description": "Debug mode is enabled in the '/login' route.",
+          "recommendation": "Disable debug mode or use environment variables to control access.",
+          "code": "app.config['DEBUG'] = False"
+        },
+        {
+          "id": "SAST-007",
+          "severity": "CRITICAL",
+          "category": "Bare Except Clauses Hiding Errors",
+          "line_range": "28-29",
+          "description": "Bare except clauses in the '/login' route are hiding all errors.",
+          "recommendation": "Use try-except blocks to handle exceptions and provide meaningful error messages.",
+          "code": "try:"
+        },
+        {
+          "id": "SAST-008",
+          "severity": "CRITICAL",
+          "category": "Missing Input Validation",
+          "line_range": "30-31",
+          "description": "Missing input validation in the '/login' route.",
+          "recommendation": "Implement input validation mechanisms.",
+          "code": "return jsonify({'status': 'failed'}), 401"
+        },
+        {
+          "id": "SAST-009",
+          "severity": "CRITICAL",
+          "category": "Insecure Network Binding",
+          "line_range": "32-33",
+          "description": "Insecure network binding in the '/login' route.",
+          "recommendation": "Use secure network configurations.",
+          "code": "conn = sqlite3.connect('users.db')"
+        },
+        {
+          "id": "SAST-010",
+          "severity": "CRITICAL",
+          "category": "Plaintext Password Storage",
+          "line_range": "34-35",
+          "description": "Plaintext password storage in the '/login' route.",
+          "recommendation": "Use secure password storage mechanisms like bcrypt or Argon2.",
+          "code": "conn = sqlite3.connect('users.db')"
+        }
+      ],
+      "summary": {
+        "total_issues": 10,
+        "critical": 5,
+        "high": 5,
+        "medium": 5,
+        "low": 5
+      }
+    },
+    {
+      "file": "database\\db_handler.py",
+      "issues": [
+        {
+          "id": "SAST-001",
+          "severity": "CRITICAL",
+          "category": "SQL Injection",
+          "line_range": "12-15",
+          "description": "No connection pooling, raw SQL execution",
+          "recommendation": "Implement connection pooling and use parameterized queries to prevent SQL injection.",
+          "code": "execute_query(query, params=None)"
+        },
+        {
+          "id": "SAST-002",
+          "severity": "CRITICAL",
+          "category": "Hardcoded Credentials / Secrets",
+          "line_range": "12-15",
+          "description": "Inconsistent return types",
+          "recommendation": "Return the result as a dictionary or list.",
+          "code": "get_user_by_id(user_id)"
+        },
+        {
+          "id": "SAST-003",
+          "severity": "CRITICAL",
+          "category": "Insecure Deserialization (pickle, yaml.load)",
+          "line_range": "12-15",
+          "description": "Weak cryptography / token generation",
+          "recommendation": "Use secure deserialization libraries like `pickle` or `yaml`.",
+          "code": "execute_query(query, params=None)"
+        },
+        {
+          "id": "SAST-004",
+          "severity": "CRITICAL",
+          "category": "Missing Authentication or Authorization",
+          "line_range": "12-15",
+          "description": "Debug mode enabled in production",
+          "recommendation": "Enable debug mode in production settings.",
+          "code": "execute_query(query, params=None)"
+        },
+        {
+          "id": "SAST-005",
+          "severity": "CRITICAL",
+          "category": "Bare except clauses hiding errors",
+          "line_range": "12-15",
+          "description": "Missing input validation",
+          "recommendation": "Implement input validation to prevent injection.",
+          "code": "execute_query(query, params=None)"
+        },
+        {
+          "id": "SAST-006",
+          "severity": "CRITICAL",
+          "category": "Insecure Network Binding",
+          "line_range": "12-15",
+          "description": "Plaintext password storage",
+          "recommendation": "Use secure password storage methods like bcrypt or Argon2.",
+          "code": "execute_query(query, params=None)"
+        }
+      ],
+      "summary": {
+        "total_issues": 10,
+        "critical": 4,
+        "high": 4,
+        "medium": 4,
+        "low": 4
+      }
+    },
+    {
+      "file": "utils\\auth.py",
+      "issues": [
+        {
+          "id": "SAST-001",
+          "severity": "CRITICAL",
+          "category": "Insecure Deserialization",
+          "line_range": "12-15",
+          "description": "The `base64.b64encode` function is not secure, which can lead to injection attacks.",
+          "recommendation": "Use a safer encoding method like `base64.urlsafe_b64encode` or `base64.encode_to_bytes`.",
+          "code": "base64.b64encode(f'{user_id}:{int(time.time())}'.encode())"
+        },
+        {
+          "id": "SAST-002",
+          "severity": "CRITICAL",
+          "category": "Insecure Deserialization",
+          "line_range": "12-15",
+          "description": "The `base64.b64decode` function is not secure, which can lead to injection attacks.",
+          "recommendation": "Use a safer decoding method like `base64.urlsafe_b64decode` or `base64.decode_from_bytes`.",
+          "code": "base64.b64decode(token).decode()"
+        },
+        {
+          "id": "SAST-003",
+          "severity": "CRITICAL",
+          "category": "Insecure Deserialization",
+          "line_range": "12-15",
+          "description": "The `base64.b64encode` function is not secure, which can lead to injection attacks.",
+          "recommendation": "Use a safer encoding method like `base64.urlsafe_b64encode` or `base64.encode_to_bytes`.",
+          "code": "base64.b64encode(f'{user_id}:{int(time.time())}'.encode())"
+        },
+        {
+          "id": "SAST-004",
+          "severity": "CRITICAL",
+          "category": "Insecure Deserialization",
+          "line_range": "12-15",
+          "description": "The `base64.b64encode` function is not secure, which can lead to injection attacks.",
+          "recommendation": "Use a safer encoding method like `base64.urlsafe_b64encode` or `base64.encode_to_bytes`.",
+          "code": "base64.b64encode(f'{user_id}:{int(time.time())}'.encode())"
+        },
+        {
+          "id": "SAST-005",
+          "severity": "CRITICAL",
+          "category": "Insecure Deserialization",
+          "line_range": "12-15",
+          "description": "The `base64.b64encode` function is not secure, which can lead to injection attacks.",
+          "recommendation": "Use a safer encoding method like `base64.urlsafe_b64encode` or `base64.encode_to_bytes`.",
+          "code": "base64.b64encode(f'{user_id}:{int(time.time())}'.encode())"
+        },
+        {
+          "id": "SAST-006",
+          "severity": "CRITICAL",
+          "category": "Insecure Deserialization",
+          "line_range": "12-15",
+          "description": "The `base64.b64encode` function is not secure, which can lead to injection attacks.",
+          "recommendation": "Use a safer encoding method like `base64.urlsafe_b64encode` or `base64.encode_to_bytes`.",
+          "code": "base64.b64encode(f'{user_id}:{int(time.time())}'.encode())"
+        },
+        {
+          "id": "SAST-007",
+          "severity": "CRITICAL",
+          "category": "Insecure Deserialization",
+          "line_range": "12-15",
+          "description": "The `base64.b64encode` function is not secure, which can lead to injection attacks.",
+          "recommendation": "Use a safer encoding method like `base64.urlsafe_b64encode` or `base64.encode_to_bytes`.",
+          "code": "base64.b64encode(f'{user_id}:{int(time.time())}'.encode())"
+        },
+        {
+          "id": "SAST-008",
+          "severity": "CRITICAL",
+          "category": "Insecure Deserialization",
+          "line_range": "12-15",
+          "description": "The `base64.b64encode` function is not secure, which can lead to injection attacks.",
+          "recommendation": "Use a safer encoding method like `base64.urlsafe_b64encode` or `base64.encode_to_bytes`.",
+          "code": "base64.b64encode(f'{user_id}:{int(time.time())}'.encode())"
+        },
+        {
+          "id": "SAST-009",
+          "severity": "CRITICAL",
+          "category": "Insecure Deserialization",
+          "line_range": "12-15",
+          "description": "The `base64.b64encode` function is not secure, which can lead to injection attacks.",
+          "recommendation": "Use a safer encoding method like `base64.urlsafe_b64encode` or `base64.encode_to_bytes`.",
+          "code": "base64.b64encode(f'{user_id}:{int(time.time())}'.encode())"
+        },
+        {
+          "id": "SAST-010",
+          "severity": "CRITICAL",
+          "category": "Insecure Deserialization",
+          "line_range": "12-15",
+          "description": "The `base64.b64encode` function is not secure, which can lead to injection attacks.",
+          "recommendation": "Use a safer encoding method like `base64.urlsafe_b64encode` or `base64.encode_to_bytes`.",
+          "code": "base64.b64encode(f'{user_id}:{int(time.time())}'.encode())"
+        }
+      ],
+      "summary": {
+        "total_issues": 10,
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      }
+    }
+  ]
+}
