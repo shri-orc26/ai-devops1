@@ -110,7 +110,8 @@ def ask_ollama(prompt: str) -> str:
         "stream": False,
         "format": "json",
         "options": {
-            "temperature": 0,
+            "temperature": 0.2,
+            "repeat_penalty": 1.15,
             "num_predict": 4096,
         },
     }
